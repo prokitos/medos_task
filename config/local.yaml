@@ -1,0 +1,13 @@
+env: "local"
+server:
+  port: ":8001"
+postgres:
+  user: "postgres"
+  pass: "root"
+  port: "8092"
+  host: "localhost"
+  name: "mymdedos"
+  reload: false
+email:
+  sender: "qqqq@gmail.com"
+  password: "qwerqweqwrq"
