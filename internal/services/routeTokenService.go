@@ -1,22 +1,74 @@
 package services
 
-func RouteGetToken(guid string) {
+import (
+	"mymod/internal/database"
+	"mymod/internal/models"
+	"os"
+)
 
-	// создаёт аксес и рефреш токены из гуида
-	// записывает рефреш токен в базу
-	// возвращает токены
+func RouteGetToken(guid string) (models.Tokens, error) {
 
+	ip, err := os.Hostname()
+	if err != nil {
+		return models.Tokens{}, err
+	}
+
+	var access = createTokenAccess(guid, ip)
+	var refresh = createTokenRefresh(guid, access)
+
+	var newRecord models.Auth
+	newRecord.GUID = guid
+	newRecord.Refresh = refresh
+	err = database.GlobalPostgres.CreateData(newRecord)
+	if err != nil {
+		return models.Tokens{}, err
+	}
+
+	var result models.Tokens
+	result.AccessToken = access
+	result.RefreshToken = refresh
+	return result, nil
 }
 
-func RouteRefreshToken(access string, refresh string) {
+func RouteRefreshToken(access string, refresh string) (models.Tokens, error) {
 
-	// проверяет валидность access и refresh токенов
-	// время жизни
-	// совпадение айпи аксес токена с текущим. если не совпало то отправка емейла.
-	// берем рефреш токен из базы, смотрим чтобы он сущестовал и совпадал с нашим рефреш токеном.
-	// смотрим чтобы именно этот аксес токен совпадал с этим рефреш токеном
-	// создаём новый аксес токен.
-	// так как не сказано что рефреш токен рефрешит сам себя, то рефреш токен может только 1 раз обновить аксес токен.
-	// возвращаем новый аксес токен.
+	// проверяем что наш рефреш токен есть в базе.
+	var curUser models.Auth
+	curUser.Refresh = refresh
+	err := database.GlobalPostgres.CheckExist(curUser)
+	if err != nil {
+		return models.Tokens{}, err
+	}
+
+	// проверка ip
+	ip, err := os.Hostname()
+	if err != nil {
+		return models.Tokens{}, err
+	}
+	err = CheckTokenIp(refresh, ip)
+	if err != nil {
+		return models.Tokens{}, err
+	}
+
+	// проверяем что аксес токен совпадает с рефреш токеном
+	err = CheckTokens(refresh, access)
+	if err != nil {
+		return models.Tokens{}, err
+	}
+
+	// создаём новые токены
+	guid, err := GetGuid(access)
+	if err != nil {
+		return models.Tokens{}, err
+	}
+	newToken := RenewToken(guid, ip)
+
+	// обновляем токены в базе
+	var newData models.Auth
+	newData.UserId = database.GlobalPostgres.GetId(models.Auth{Refresh: refresh})
+	newData.Refresh = newToken.RefreshToken
+	database.GlobalPostgres.UpdateData(newData)
+
+	return newToken, nil
 
 }

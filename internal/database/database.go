@@ -18,17 +18,17 @@ type PostgresDatabase struct {
 }
 
 func (currentlDB *PostgresDatabase) Run(config config.MainConfig) {
-	currentlDB.OpenConnection(config)
-	currentlDB.StartMigration()
-	currentlDB.GlobalSet()
+	currentlDB.openConnection(config)
+	currentlDB.startMigration()
+	currentlDB.globalSet()
 }
 
-func (currentlDB *PostgresDatabase) StartMigration() {
-
+func (currentlDB *PostgresDatabase) startMigration() {
+	currentlDB.Instance.AutoMigrate(models.Auth{})
 	log.Debug("migration complete")
 }
 
-func (currentlDB *PostgresDatabase) OpenConnection(config config.MainConfig) {
+func (currentlDB *PostgresDatabase) openConnection(config config.MainConfig) {
 
 	err := currentlDB.checkDatabaseCreated(config)
 	if err != nil {
@@ -49,7 +49,7 @@ func (currentlDB *PostgresDatabase) OpenConnection(config config.MainConfig) {
 
 	sqlDB.SetMaxIdleConns(4)
 	sqlDB.SetMaxOpenConns(8)
-	sqlDB.SetConnMaxLifetime(0)
+	sqlDB.SetConnMaxLifetime(30 * time.Minute)
 	sqlDB.SetConnMaxIdleTime(10 * time.Minute)
 
 	currentlDB.Instance = db
@@ -93,6 +93,6 @@ func (currentlDB *PostgresDatabase) checkDatabaseCreated(config config.MainConfi
 	return nil
 }
 
-func (currentlDB *PostgresDatabase) GlobalSet() {
+func (currentlDB *PostgresDatabase) globalSet() {
 	GlobalPostgres = currentlDB
 }
