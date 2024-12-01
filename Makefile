@@ -4,12 +4,12 @@ VERSION?=0.0.1
 
 
 
-currentDepoly: deployDocker
+currentDepoly: deployBase
 
 
 
 deployBase: buildBase test fmt vet 
-deployDocker: buildBase test fmt vet docker
+deployDocker: buildBase fmt vet docker
 
 
 

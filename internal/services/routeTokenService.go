@@ -3,31 +3,45 @@ package services
 import (
 	"mymod/internal/database"
 	"mymod/internal/models"
-	"os"
+	"net"
 	"strconv"
 )
+
+// получить айпи
+func resolveHostIp() string {
+
+	netInterfaceAddresses, err := net.InterfaceAddrs()
+	if err != nil {
+		return ""
+	}
+	for _, netInterfaceAddress := range netInterfaceAddresses {
+		networkIp, ok := netInterfaceAddress.(*net.IPNet)
+		if ok && !networkIp.IP.IsLoopback() && networkIp.IP.To4() != nil {
+			ip := networkIp.IP.String()
+			return ip
+		}
+	}
+	return ""
+}
 
 // получает рефреш и аксес токены
 func RouteGetToken(guid string) (models.Tokens, error) {
 
 	// получает ip.
-	ip, err := os.Hostname()
-	if err != nil {
-		return models.Tokens{}, err
-	}
+	ip := resolveHostIp()
 
 	// создаёт пару токенов.
 	var access = createTokenAccess(guid, ip)
 	var refresh = createTokenRefresh(guid, access)
 
 	// так как в таблице хранятся только токены, то просто удаляется вся запись с токенами для этого guid.
-	database.GlobalPostgres.DeleteData(models.Auth{GUID: guid})
+	database.GlobalPostgres.DeleteDataByGuid(models.Auth{GUID: guid})
 
 	// создаёт записи в таблице.
 	var newRecord models.Auth
 	newRecord.GUID = guid
 	newRecord.Refresh = refresh
-	err = database.GlobalPostgres.CreateData(newRecord)
+	err := database.GlobalPostgres.CreateData(newRecord)
 	if err != nil {
 		return models.Tokens{}, err
 	}
@@ -61,14 +75,8 @@ func RouteRefreshToken(access string, refresh string) (models.Tokens, error) {
 	}
 
 	// проверка ip. если не совпадают то отправка сообщения на почту.
-	ip, err := os.Hostname()
-	if err != nil {
-		return models.Tokens{}, err
-	}
-	err = checkTokenIp(refresh, ip)
-	if err != nil {
-		return models.Tokens{}, err
-	}
+	ip := resolveHostIp()
+	checkTokenIp(refresh, ip)
 
 	// создаёт новые токены
 	guid, err := getGuid(access)

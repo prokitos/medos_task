@@ -12,12 +12,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var CONFIG_TYPE string = "local"
+
 func main() {
 	log.SetLevel(log.DebugLevel)
 	log.Debug("log is loaded")
 
 	var cfg config.MainConfig
-	cfg.ConfigMustLoad("docker")
+	cfg.ConfigMustLoad(CONFIG_TYPE)
 	services.GlobalEmail = cfg.Email
 	log.Debug("config is loaded")
 

@@ -10,6 +10,10 @@ import (
 func getToken(c *fiber.Ctx) error {
 
 	var GUID = c.Query("GUID", "")
+	if GUID == "" {
+		return c.Status(400).JSON("empty query")
+	}
+
 	res, err := services.RouteGetToken(GUID)
 
 	if err != nil {
@@ -24,6 +28,9 @@ func refreshToken(c *fiber.Ctx) error {
 
 	var refreshToken = c.Query("refresh", "")
 	var accessToken = c.Query("access", "")
+	if refreshToken == "" || accessToken == "" {
+		return c.Status(400).JSON("empty query")
+	}
 
 	res, err := services.RouteRefreshToken(accessToken, refreshToken)
 	if err != nil {

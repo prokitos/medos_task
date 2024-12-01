@@ -29,7 +29,7 @@ func (currentlDB *PostgresDatabase) UpdateData(data models.Auth) error {
 	return nil
 }
 
-func (currentlDB *PostgresDatabase) DeleteData(data models.Auth) error {
+func (currentlDB *PostgresDatabase) DeleteDataByGuid(data models.Auth) error {
 
 	// result := currentlDB.Instance.Delete(&data, data.GUID)
 	result := currentlDB.Instance.Model(&models.Auth{}).Where("guid= ?", data.GUID).Delete(&data)

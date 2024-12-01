@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"mymod/internal/models"
 	"time"
 
@@ -131,6 +132,7 @@ func checkTokenIp(refresh string, ip string) error {
 
 	if newdata.Ip != ip {
 		SendEmail(newdata.Email)
+		return errors.New("ip does not match")
 	}
 
 	return nil
@@ -155,16 +157,15 @@ func checkRefreshTokens(refreshToken string, accessToken string) error {
 	var errorr string
 	token, err := validateRefreshToken(refreshToken)
 	if err != nil {
-		errorr = "refresh token unauthorized"
 		if err == jwt.ErrSignatureInvalid {
 			errorr = "refresh token sign unknown"
 			return models.ResponseBase{}.CustomTokenError(errorr)
 		}
-		return models.ResponseBase{}.CustomTokenError(errorr)
+		return models.ResponseBase{}.CustomTokenError(err.Error())
 	}
 
 	if !token.Valid {
-		errorr = "refresh token expired"
+		errorr = "refresh token invalid"
 		return models.ResponseBase{}.CustomTokenError(errorr)
 	}
 
@@ -172,6 +173,14 @@ func checkRefreshTokens(refreshToken string, accessToken string) error {
 	refToken := token.Claims.(*models.TokenRefreshData)
 	if refToken.AcceessToken != accessToken {
 		errorr = "access token missmatch"
+		return models.ResponseBase{}.CustomTokenError(errorr)
+	}
+
+	// проверка guid в токенах
+	acctoken, err := validateAccessToken(refToken.AcceessToken)
+	newAccToken := acctoken.Claims.(*models.TokenAccessData)
+	if newAccToken.GUID != refToken.GUID {
+		errorr = "guid in tokens missmatch"
 		return models.ResponseBase{}.CustomTokenError(errorr)
 	}
 
@@ -183,17 +192,17 @@ func checkAccessToken(accessToken string) error {
 
 	var errorr string
 	token, err := validateAccessToken(accessToken)
+
 	if err != nil {
-		errorr = "access token unauthorized"
 		if err == jwt.ErrSignatureInvalid {
 			errorr = "access token sign unknown"
 			return models.ResponseBase{}.CustomTokenError(errorr)
 		}
-		return models.ResponseBase{}.CustomTokenError(errorr)
+		return models.ResponseBase{}.CustomTokenError(err.Error())
 	}
 
 	if !token.Valid {
-		errorr = "access token expired"
+		errorr = "access token invalid"
 		return models.ResponseBase{}.CustomTokenError(errorr)
 	}
 
