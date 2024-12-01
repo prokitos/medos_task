@@ -3,7 +3,7 @@ package models
 import "errors"
 
 type ResponseBase struct {
-	Description string `json:"description"       		 example:"description"`
+	Description string `json:"description" example:"description"`
 }
 
 func (instance ResponseBase) BaseServerError() error {

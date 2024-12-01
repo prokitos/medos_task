@@ -1,0 +1,37 @@
+version: "2.1"
+
+
+networks:
+  ps:
+
+
+services:
+
+  mdeos:
+    image: medos-container:0.0.1
+    container_name: ps-medos
+    ports:
+      - "127.0.0.1:8001:8001"
+    depends_on:
+      "postgresql":
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -ltn | grep -c 8001"]
+    networks:
+      - ps
+
+  postgresql:
+    image: postgres:14-alpine
+    container_name: ps-sql
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=root
+    volumes:
+      - ./data:/var/lib/postgresql/data
+    networks:
+      - ps
+    healthcheck:
+      test: pg_isready -U postgres

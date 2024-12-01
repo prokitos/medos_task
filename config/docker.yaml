@@ -1,0 +1,14 @@
+env: "local"
+server:
+  port: ":8001"
+postgres:
+  user: "postgres"
+  pass: "root"
+  port: "5432"
+  host: "postgresql"
+  name: "clean"
+  reload: false
+email:
+  reciever: "wwww@gmail.com"
+  sender: "qqqq@gmail.com"
+  password: "qwerqweqwrq"

@@ -17,7 +17,7 @@ func main() {
 	log.Debug("log is loaded")
 
 	var cfg config.MainConfig
-	cfg.ConfigMustLoad("local")
+	cfg.ConfigMustLoad("docker")
 	services.GlobalEmail = cfg.Email
 	log.Debug("config is loaded")
 
