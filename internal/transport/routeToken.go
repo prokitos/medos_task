@@ -13,7 +13,7 @@ func getToken(c *fiber.Ctx) error {
 	res, err := services.RouteGetToken(GUID)
 
 	if err != nil {
-		return err
+		return c.Status(400).JSON(err.Error())
 	}
 
 	return c.Status(200).JSON(res)
@@ -27,7 +27,7 @@ func refreshToken(c *fiber.Ctx) error {
 
 	res, err := services.RouteRefreshToken(accessToken, refreshToken)
 	if err != nil {
-		return err
+		return c.Status(400).JSON(err.Error())
 	}
 
 	return c.Status(200).JSON(res)

@@ -17,6 +17,7 @@ type PostgresDatabase struct {
 	Instance *gorm.DB
 }
 
+// запуск при старте сервера
 func (currentlDB *PostgresDatabase) Run(config config.MainConfig) {
 	currentlDB.openConnection(config)
 	currentlDB.startMigration()

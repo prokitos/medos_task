@@ -6,8 +6,9 @@ postgres:
   pass: "root"
   port: "8092"
   host: "localhost"
-  name: "mymdedos"
+  name: "mymedos"
   reload: false
 email:
+  reciever: "wwww@gmail.com"
   sender: "qqqq@gmail.com"
   password: "qwerqweqwrq"

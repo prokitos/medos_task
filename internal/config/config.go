@@ -27,8 +27,10 @@ type PostgresConfig struct {
 type EmailConfig struct {
 	Sender   string `yaml:"sender"`
 	Password string `yaml:"password"`
+	Reciever string `yaml:"reciever"`
 }
 
+// загрузка конфигов из yaml файла в структуры
 func (cfg *MainConfig) ConfigMustLoad(name string) {
 
 	path := "./config/" + name + ".yaml"

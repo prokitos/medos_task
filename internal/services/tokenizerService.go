@@ -1,9 +1,7 @@
 package services
 
 import (
-	"errors"
 	"mymod/internal/models"
-	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -16,11 +14,11 @@ var refreshKey = []byte("super_secret_key")
 // создание аксес токена.
 func createTokenAccess(GUID string, ip string) string {
 
-	// создаем токен, для теста укажим email при создании
+	// создает токен, для теста email указан при создании.
 	var tokenObj = models.TokenAccessData{
 		GUID:  GUID,
 		Ip:    ip,
-		Email: "test@gmail.com",
+		Email: GlobalEmail.Reciever,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(5 * time.Minute).Unix(),
 		},
@@ -40,7 +38,7 @@ func createTokenAccess(GUID string, ip string) string {
 // создание рефреш токена.
 func createTokenRefresh(GUID string, accessToken string) string {
 
-	// создаем токен
+	// создает токен
 	var tokenObj = models.TokenRefreshData{
 		GUID:         GUID,
 		AcceessToken: accessToken,
@@ -61,86 +59,11 @@ func createTokenRefresh(GUID string, accessToken string) string {
 	return tokenString
 }
 
-// получить новый рефреш токен
-func RenewToken(guid string, ip string) models.Tokens {
-
-	var result models.Tokens
-
-	// ВСЁ ВАЛИДНО! создание нового рефреш и аксес токена
-	result.AccessToken = createTokenAccess(guid, ip)
-	result.RefreshToken = createTokenRefresh(guid, result.AccessToken)
-
-	// возвращаем токены обратно
-	return result
-}
-
-func CheckTokens(refreshToken string, accessToken string) error {
-
-	var errorr string
-
-	// проверка рефреш токена
-	token, err := validateRefreshToken(refreshToken)
-	if err != nil {
-		errorr = "refresh token unauthorized"
-		if err == jwt.ErrSignatureInvalid {
-			errorr = "refresh token sign unknown"
-			return errors.New(errorr)
-		}
-		return errors.New(errorr)
-	}
-
-	if !token.Valid {
-		errorr = "refresh token expired"
-		return errors.New(errorr)
-	}
-
-	// проверяем что аксес токен внутри рефреш токена совпадает с нашим аксес токеном.
-	refToken := token.Claims.(*models.TokenRefreshData)
-	if refToken.AcceessToken != accessToken {
-		errorr = "access token missmatch"
-		return errors.New(errorr)
-	}
-
-	return nil
-}
-
-func GetGuid(access string) (string, error) {
-
-	token, err := validateRefreshToken(access)
-	if err != nil {
-		return "", err
-	}
-
-	accToken := token.Claims.(*models.TokenAccessData)
-	return accToken.GUID, nil
-}
-
-func CheckTokenIp(refresh string, ip string) error {
-
-	token, err := validateRefreshToken(refresh)
-	if err != nil {
-		return err
-	}
-
-	refToken := token.Claims.(*models.TokenRefreshData)
-
-	token, err = validateRefreshToken(refToken.AcceessToken)
-	if err != nil {
-		return err
-	}
-
-	accToken := token.Claims.(*models.TokenAccessData)
-	if accToken.Ip != ip {
-		SendEmail(accToken.Email)
-	}
-
-	return nil
-}
-
 // проверка валидности access токена
 func validateAccessToken(bearerToken string) (*jwt.Token, error) {
 
-	tokenString := strings.Split(bearerToken, " ")[1]
+	//tokenString := strings.Split(bearerToken, " ")[1]
+	tokenString := bearerToken
 	token, err := jwt.ParseWithClaims(tokenString, &models.TokenAccessData{}, func(token *jwt.Token) (interface{}, error) {
 		return accessKey, nil
 	})
@@ -158,4 +81,121 @@ func validateRefreshToken(bearerToken string) (*jwt.Token, error) {
 	})
 
 	return token, err
+}
+
+// получает данные по аксес токену
+func getAccessToken(access string) (*models.TokenAccessData, error) {
+	token, err := validateAccessToken(access)
+	if err != nil {
+		return nil, err
+	}
+
+	data := token.Claims.(*models.TokenAccessData)
+	return data, nil
+}
+
+// получает данные по рефреш токену
+func getRefreshToken(refresh string) (*models.TokenRefreshData, error) {
+	token, err := validateRefreshToken(refresh)
+	if err != nil {
+		return nil, err
+	}
+
+	data := token.Claims.(*models.TokenRefreshData)
+	return data, nil
+}
+
+// получает guid по аксес токену
+func getGuid(access string) (string, error) {
+
+	data, err := getAccessToken(access)
+	if err != nil {
+		return "", err
+	}
+
+	return data.GUID, nil
+}
+
+// проверка совпадает ли текущий айпи и айпи в рефреш токене
+func checkTokenIp(refresh string, ip string) error {
+
+	data, err := getRefreshToken(refresh)
+	if err != nil {
+		return err
+	}
+
+	newdata, err := getAccessToken(data.AcceessToken)
+	if err != nil {
+		return err
+	}
+
+	if newdata.Ip != ip {
+		SendEmail(newdata.Email)
+	}
+
+	return nil
+}
+
+// получить новый рефреш токен
+func renewToken(guid string, ip string) models.Tokens {
+
+	var result models.Tokens
+
+	// ТУТ УЖЕ ДОЛЖНО БЫТЬ ВСЁ ВАЛИДНО и поэтому идёт просто создание нового рефреш и аксес токена
+	result.AccessToken = createTokenAccess(guid, ip)
+	result.RefreshToken = createTokenRefresh(guid, result.AccessToken)
+
+	// возвращаем токены обратно
+	return result
+}
+
+// проверка рефреш токена
+func checkRefreshTokens(refreshToken string, accessToken string) error {
+
+	var errorr string
+	token, err := validateRefreshToken(refreshToken)
+	if err != nil {
+		errorr = "refresh token unauthorized"
+		if err == jwt.ErrSignatureInvalid {
+			errorr = "refresh token sign unknown"
+			return models.ResponseBase{}.CustomTokenError(errorr)
+		}
+		return models.ResponseBase{}.CustomTokenError(errorr)
+	}
+
+	if !token.Valid {
+		errorr = "refresh token expired"
+		return models.ResponseBase{}.CustomTokenError(errorr)
+	}
+
+	// проверяем что аксес токен внутри рефреш токена совпадает с нашим аксес токеном.
+	refToken := token.Claims.(*models.TokenRefreshData)
+	if refToken.AcceessToken != accessToken {
+		errorr = "access token missmatch"
+		return models.ResponseBase{}.CustomTokenError(errorr)
+	}
+
+	return nil
+}
+
+// проверка аксес токена
+func checkAccessToken(accessToken string) error {
+
+	var errorr string
+	token, err := validateAccessToken(accessToken)
+	if err != nil {
+		errorr = "access token unauthorized"
+		if err == jwt.ErrSignatureInvalid {
+			errorr = "access token sign unknown"
+			return models.ResponseBase{}.CustomTokenError(errorr)
+		}
+		return models.ResponseBase{}.CustomTokenError(errorr)
+	}
+
+	if !token.Valid {
+		errorr = "access token expired"
+		return models.ResponseBase{}.CustomTokenError(errorr)
+	}
+
+	return nil
 }
